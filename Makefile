@@ -9,5 +9,5 @@ $(UIPY):	$(UI)
 
 clean:
 	rm -f $(UIPY)
-	rm -f *.pyc
+	rm -f simuleds/*.pyc
 
