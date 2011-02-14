@@ -1,3 +1,11 @@
 a simulator for my arduino and leds
 
 I'm not good at writing C, so I prefer check the logic in Python...
+
+Circuitry:
+
+out0 ---- led0 --+-- gnd
+out1 ---- led1 --+
+out2 ---- led2 --+
+out3 ---- led3 --+
+out4 ---- led4 --+
