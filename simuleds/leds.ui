@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>313</width>
-    <height>173</height>
+    <height>612</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Frame</string>
+   <string>Test pins output !</string>
   </property>
   <property name="styleSheet">
    <string notr="true"> QCheckBox {
@@ -38,9 +38,6 @@ background-color: rgb(255, 0, 0);
      </property>
     </widget>
    </item>
-   <item row="0" column="1" rowspan="6">
-    <widget class="QTextBrowser" name="log"/>
-   </item>
    <item row="1" column="0">
     <widget class="QCheckBox" name="led_1">
      <property name="text">
@@ -54,6 +51,9 @@ background-color: rgb(255, 0, 0);
       <string>led_2</string>
      </property>
     </widget>
+   </item>
+   <item row="0" column="1" rowspan="14">
+    <widget class="QTextBrowser" name="log"/>
    </item>
    <item row="3" column="0">
     <widget class="QCheckBox" name="led_3">
@@ -70,9 +70,72 @@ background-color: rgb(255, 0, 0);
     </widget>
    </item>
    <item row="5" column="0">
+    <widget class="QCheckBox" name="led_5">
+     <property name="text">
+      <string>led_5</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="led_6">
+     <property name="text">
+      <string>led_6</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QCheckBox" name="led_7">
+     <property name="text">
+      <string>led_7</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QCheckBox" name="led_8">
+     <property name="text">
+      <string>led_8</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0">
+    <widget class="QCheckBox" name="led_9">
+     <property name="text">
+      <string>led_9</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QCheckBox" name="led_10">
+     <property name="text">
+      <string>led_10</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0">
+    <widget class="QCheckBox" name="led_11">
+     <property name="text">
+      <string>led_11</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0">
+    <widget class="QCheckBox" name="led_12">
+     <property name="text">
+      <string>led_12</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0">
+    <widget class="QCheckBox" name="led_13">
+     <property name="text">
+      <string>led_13</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0" colspan="2">
     <widget class="QPushButton" name="start">
      <property name="text">
-      <string>start</string>
+      <string>reset simu</string>
      </property>
     </widget>
    </item>

@@ -1,14 +1,10 @@
 from abc import abstractmethod
-from sys import argv
 
 from PyQt4.QtCore import QObject, QThread, SIGNAL
-from PyQt4.QtGui import QApplication, QFrame
+from PyQt4.QtGui import QFrame
 
 from .leds_ui import Ui_Frame
 
-
-PIN_NB = 5
-COMBINATIONS = 1 << PIN_NB
 
 ARDUINO_DIGITAL_PIN_NB = 14
 
@@ -20,6 +16,9 @@ _PINSIGNAL = SIGNAL('value changed')
 _LOOPMSGSIGNAL = SIGNAL('loop message')
 
 class SimException(Exception): pass
+
+def delay(msecs):
+    QThread.msleep(msecs)
 
 class Pin(QObject):
 
@@ -90,26 +89,9 @@ class Simardui(QObject):
     def loop(self):
         pass
 
+    def log(self, message):
+        self.emit(_LOOPMSGSIGNAL, message)
 
-class Mysim(Simardui):
-    def setup(self):
-        for index in xrange(PIN_NB):
-            self.pinMode(index, OUTPUT)
-        Simardui.setup(self)
-
-    def loop(self):
-        for number in xrange(COMBINATIONS):
-            self.emit(_LOOPMSGSIGNAL, u"evaluating 0x%.2x" % number)
-            for index in xrange(PIN_NB):
-                if not self.started:
-                    return
-                pinvalue = 1 << index
-                outputvalue = bool(pinvalue & number)
-                self.emit(_LOOPMSGSIGNAL,
-                    u"value 0x%.2x -> %s" % (pinvalue, outputvalue)
-                    )
-                self.digitalWrite(index, outputvalue)
-            QThread.msleep(500)
 
 class ArduiThread(QThread):
     def __init__(self, method, *args, **kwargs):
@@ -121,41 +103,28 @@ class ArduiThread(QThread):
     def run(self):
         self.method(*self.args, **self.kwargs)
 
-def getboxbynum(design, num):
-    return getattr(design, 'led_%d' % num)
 
-def checkerfactory(design, num):
-    box = getboxbynum(design, num)
-    def checker(value):
-        box.setChecked(value)
-    return checker
+class Interface(QFrame):
+    def __init__(self, parent=None):
+        QFrame.__init__(self, parent)
+        self.design = Ui_Frame()
+        self.design.setupUi(self)
 
-def main():
-    app = QApplication(argv)
+    def getboxbynum(self, num):
+        return getattr(self.design, 'led_%d' % num)
 
-    #set up ui
-    frame = QFrame()
-    leds = Ui_Frame()
-    leds.setupUi(frame)
+    def setsim(self, sim):
+        #ui signals -> logs
+        QObject.connect(sim, _LOOPMSGSIGNAL, self.design.log.append)
 
-    #the fake proto
-    sim = Mysim()
-    thread = ArduiThread(sim.start)
+        #ui signals -> reset button on the proto
+        QObject.connect(self.design.start, SIGNAL('clicked()'), sim.start)
 
-    #ui signals -> reset button on the proto and debug messages in the console
-    QObject.connect(leds.start, SIGNAL('clicked()'), sim.start)
-    QObject.connect(sim, _LOOPMSGSIGNAL, leds.log.append)
+        #signals to set box values
+        for index in xrange(ARDUINO_DIGITAL_PIN_NB):
+            box = self.getboxbynum(index)
+            QObject.connect(sim.pins[index], _PINSIGNAL, box.setChecked)
 
-    #signals to set box values
-    for index in xrange(PIN_NB):
-        box = getboxbynum(leds, index)
-        QObject.connect(sim.pins[index], _PINSIGNAL, box.setChecked)
-
-    #start it all
-    thread.start()
-    frame.show()
-    app.exec_()
-
-if __name__ == '__main__':
-    main()
+        self.thread = ArduiThread(sim.start)
+        self.thread.start()
 
