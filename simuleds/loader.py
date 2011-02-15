@@ -1,9 +1,10 @@
+from imp import find_module, load_module
+from os.path import split
 from sys import argv, stderr
 from traceback import print_exc
 
 from PyQt4.QtGui import QApplication, QFileDialog, QMessageBox
 
-from .api import SimException
 from .simuleds import Interface, Simardui
 
 
@@ -14,31 +15,16 @@ def simfactory(name, filename):
     setup = None
     loop = None
 
-    with open(filename, 'r') as fdesc:
-        source = fdesc.read()
-        code = compile(source, filename, 'exec')
+    if filename.endswith('.py'):
+        module = filename[:-3]
+    else:
+        module = filename
+    path, module = split(module)
 
-        for value in code.co_consts:
-            if not hasattr(value, 'co_name'):
-                continue
-            elif value.co_name == 'setup':
-                setup = value
-            elif value.co_name == 'loop':
-                loop = value
+    plugin_info = find_module(module, [path,])
+    loaded = load_module(name, *plugin_info)
 
-    if None in (setup, loop):
-        raise SimException(
-            "Python source file '%s' does not contain setup AND "
-            "loop functions (required)." % filename
-            )
-    for func in setup, loop:
-        if func.co_argcount != 0:
-            raise SimException(
-                "In Python source file '%s', function '%s' "
-                "should not take args." % (filename, func.co_name)
-                )
-
-    Simobject = type(name, (Simardui, ), {'setup': setup, 'loop': loop})
+    Simobject = type(name, (Simardui, ), {'setup': loaded.setup, 'loop': loaded.loop})
 
     return Simobject
 

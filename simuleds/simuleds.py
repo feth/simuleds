@@ -44,29 +44,10 @@ class Pin(QObject):
 
 class Simardui(QObject):
 
-    plugin_env = dict(
-        ARDUINO_DIGITAL_PIN_NB=api.ARDUINO_DIGITAL_PIN_NB,
-        delay=api.delay,
-        INPUT=api.INPUT,
-        NOTUSED=api.NOTUSED,
-        OUTPUT=api.OUTPUT,
-        )
-
     def __init__(self):
         QObject.__init__(self)
         self.pins = tuple(Pin() for index in xrange(api.ARDUINO_DIGITAL_PIN_NB))
         self.started = self.alive = False
-
-        plugin_env = self.__class__.plugin_env
-        plugin_env.update(dict(
-                    digitalWrite=self.digitalWrite,
-                    isresetting=self.isresetting,
-                    log=self.log,
-                    pinMode=self.pinMode,
-                    )
-                )
-
-        self.plugin_env = plugin_env
 
     def start(self):
         self.started = False
@@ -83,7 +64,7 @@ class Simardui(QObject):
         while True:
             self._setup()
             while self.started:
-                exec self.loop in self.plugin_env, locals()
+                self.loop()
 
     def digitalWrite(self, index, value):
         self.pins[index].digitalWrite(value)
@@ -97,7 +78,7 @@ class Simardui(QObject):
     def _setup(self):
         global pinMode
         pinMode = self.pinMode
-        exec self.setup in self.plugin_env, locals()
+        self.setup()
         self.started = True
 
     def log(self, message):
