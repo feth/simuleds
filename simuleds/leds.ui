@@ -139,6 +139,13 @@ background-color: rgb(255, 0, 0);
      </property>
     </widget>
    </item>
+   <item row="15" column="0" colspan="2">
+    <widget class="QPushButton" name="load">
+     <property name="text">
+      <string>load firmware (*.py)</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
