@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 from PyQt4.QtCore import QObject, QThread, SIGNAL
 from PyQt4.QtGui import QFrame
 
@@ -68,9 +66,16 @@ class Simardui(QObject):
     def live(self):
         self.alive = True
         while True:
-            self.setup()
+            self._setup()
             while self.started:
-                self.loop()
+                global digitalWrite
+                digitalWrite = self.digitalWrite
+                global log
+                log = self.log
+                global started
+                started = self.started
+                pinMode = self.pinMode
+                exec self.loop in globals(), locals()
 
     def digitalWrite(self, index, value):
         self.pins[index].digitalWrite(value)
@@ -81,13 +86,11 @@ class Simardui(QObject):
     def pinMode(self, index, mode):
         self.pins[index].mode = mode
 
-    @abstractmethod
-    def setup(self):
+    def _setup(self):
+        global pinMode
+        pinMode = self.pinMode
+        exec self.setup in globals(), locals()
         self.started = True
-
-    @abstractmethod
-    def loop(self):
-        pass
 
     def log(self, message):
         self.emit(_LOOPMSGSIGNAL, message)
