@@ -3,17 +3,20 @@ from traceback import print_exc
 
 from PyQt4.QtGui import QApplication, QFileDialog, QMessageBox
 
-from .simuleds import Interface, Simardui, SimException
+from .api import SimException
+from .simuleds import Interface, Simardui
 
 
 def simfactory(name, filename):
+    """
+    Builds a sim from a filename
+    """
     setup = None
     loop = None
 
     with open(filename, 'r') as fdesc:
         source = fdesc.read()
         code = compile(source, filename, 'exec')
-
 
         for value in code.co_consts:
             if not hasattr(value, 'co_name'):
@@ -39,7 +42,11 @@ def simfactory(name, filename):
 
     return Simobject
 
+
 def getsim():
+    """
+    Interacts with user to get a sim plugin
+    """
     while True:
         filename = unicode(QFileDialog.getOpenFileName())
         if not filename:
@@ -64,6 +71,7 @@ def getsim():
             QMessageBox.warning(None, "Error", unicode(err))
             continue
         return simklass
+
 
 def main():
 

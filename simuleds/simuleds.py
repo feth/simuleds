@@ -1,22 +1,13 @@
 from PyQt4.QtCore import QObject, QThread, SIGNAL
 from PyQt4.QtGui import QFrame
 
+from . import api
 from .leds_ui import Ui_Frame
+from .api import NOTUSED, OUTPUT, INPUT, SimException
 
-
-ARDUINO_DIGITAL_PIN_NB = 14
-
-NOTUSED = 0
-INPUT = 1
-OUTPUT = 2
 
 _PINSIGNAL = SIGNAL('value changed')
 _LOOPMSGSIGNAL = SIGNAL('loop message')
-
-class SimException(Exception): pass
-
-def delay(msecs):
-    QThread.msleep(msecs)
 
 class Pin(QObject):
 
@@ -52,10 +43,30 @@ class Pin(QObject):
 
 
 class Simardui(QObject):
+
+    plugin_env = dict(
+        ARDUINO_DIGITAL_PIN_NB=api.ARDUINO_DIGITAL_PIN_NB,
+        delay=api.delay,
+        INPUT=api.INPUT,
+        NOTUSED=api.NOTUSED,
+        OUTPUT=api.OUTPUT,
+        )
+
     def __init__(self):
         QObject.__init__(self)
-        self.pins = tuple(Pin() for index in xrange(ARDUINO_DIGITAL_PIN_NB))
+        self.pins = tuple(Pin() for index in xrange(api.ARDUINO_DIGITAL_PIN_NB))
         self.started = self.alive = False
+
+        plugin_env = self.__class__.plugin_env
+        plugin_env.update(dict(
+                    digitalWrite=self.digitalWrite,
+                    isresetting=self.isresetting,
+                    log=self.log,
+                    pinMode=self.pinMode,
+                    )
+                )
+
+        self.plugin_env = plugin_env
 
     def start(self):
         self.started = False
@@ -72,14 +83,7 @@ class Simardui(QObject):
         while True:
             self._setup()
             while self.started:
-                global digitalWrite
-                digitalWrite = self.digitalWrite
-                global log
-                log = self.log
-                global isresetting
-                isresetting = self.isresetting
-                pinMode = self.pinMode
-                exec self.loop in globals(), locals()
+                exec self.loop in self.plugin_env, locals()
 
     def digitalWrite(self, index, value):
         self.pins[index].digitalWrite(value)
@@ -93,7 +97,7 @@ class Simardui(QObject):
     def _setup(self):
         global pinMode
         pinMode = self.pinMode
-        exec self.setup in globals(), locals()
+        exec self.setup in self.plugin_env, locals()
         self.started = True
 
     def log(self, message):
@@ -128,7 +132,7 @@ class Interface(QFrame):
         QObject.connect(self.design.start, SIGNAL('clicked()'), sim.start)
 
         #signals to set box values
-        for index in xrange(ARDUINO_DIGITAL_PIN_NB):
+        for index in xrange(api.ARDUINO_DIGITAL_PIN_NB):
             box = self.getboxbynum(index)
             QObject.connect(sim.pins[index], _PINSIGNAL, box.setChecked)
 
