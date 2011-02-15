@@ -10,11 +10,54 @@ from .leds_ui import Ui_Frame
 PIN_NB = 5
 COMBINATIONS = 1 << PIN_NB
 
+ARDUINO_DIGITAL_PIN_NB = 14
 
-class Simardui(object):
-    def __init__(self, log, output_fns):
-        self.log = log
-        self.output_fns = output_fns
+NOTUSED = 0
+INPUT = 1
+OUTPUT = 2
+
+_PINSIGNAL = SIGNAL('value changed')
+_LOOPMSGSIGNAL = SIGNAL('loop message')
+
+class SimException(Exception): pass
+
+class Pin(QObject):
+
+    def __init__(self):
+        QObject.__init__(self)
+        self.value = False
+        self.value = False
+        self.mode = NOTUSED
+
+    def digitalWrite(self, value):
+        if not (self.mode is OUTPUT):
+            raise SimException("pin not in write mode")
+        self.value = bool(value)
+        self.emit(_PINSIGNAL, self.value)
+
+    def digitalRead(self):
+        if not (self.mode & INPUT):
+            raise SimException("pin not in read mode")
+        return self.value
+
+    #'mode' is a property, and self._mode is indirectly set in __init__
+    # pylint: disable=W0201
+    def _setmode(self, mode):
+        if not mode in (NOTUSED, INPUT, OUTPUT):
+            raise ValueError(mode)
+        self._mode = mode
+
+    def _getmode(self):
+        return self._mode
+
+    mode = property(fget=_getmode, fset=_setmode)
+    # pylint: enable=W0201
+
+
+class Simardui(QObject):
+    def __init__(self):
+        QObject.__init__(self)
+        self.pins = tuple(Pin() for index in xrange(ARDUINO_DIGITAL_PIN_NB))
         self.started = self.alive = False
 
     def start(self):
@@ -30,6 +73,15 @@ class Simardui(object):
             while self.started:
                 self.loop()
 
+    def digitalWrite(self, index, value):
+        self.pins[index].digitalWrite(value)
+
+    def digitalRead(self, index):
+        return self.pins[index].digitalRead()
+
+    def pinMode(self, index, mode):
+        self.pins[index].mode = mode
+
     @abstractmethod
     def setup(self):
         self.started = True
@@ -38,24 +90,25 @@ class Simardui(object):
     def loop(self):
         pass
 
+
 class Mysim(Simardui):
     def setup(self):
-        for output_fn in self.output_fns:
-            output_fn(False)
+        for index in xrange(PIN_NB):
+            self.pinMode(index, OUTPUT)
         Simardui.setup(self)
 
     def loop(self):
         for number in xrange(COMBINATIONS):
-            self.log.append(u"evaluating 0x%.2x" % number)
-            for index, pin in enumerate(self.output_fns):
+            self.emit(_LOOPMSGSIGNAL, u"evaluating 0x%.2x" % number)
+            for index in xrange(PIN_NB):
                 if not self.started:
                     return
                 pinvalue = 1 << index
                 outputvalue = bool(pinvalue & number)
-                self.log.append(
+                self.emit(_LOOPMSGSIGNAL,
                     u"value 0x%.2x -> %s" % (pinvalue, outputvalue)
                     )
-                pin(outputvalue)
+                self.digitalWrite(index, outputvalue)
             QThread.msleep(500)
 
 class ArduiThread(QThread):
@@ -79,18 +132,26 @@ def checkerfactory(design, num):
 
 def main():
     app = QApplication(argv)
+
+    #set up ui
     frame = QFrame()
     leds = Ui_Frame()
     leds.setupUi(frame)
 
-    outputs = tuple(
-        checkerfactory(leds, num)
-        for num in xrange(PIN_NB)
-        )
-
-    sim = Mysim(leds.log, outputs)
+    #the fake proto
+    sim = Mysim()
     thread = ArduiThread(sim.start)
+
+    #ui signals -> reset button on the proto and debug messages in the console
     QObject.connect(leds.start, SIGNAL('clicked()'), sim.start)
+    QObject.connect(sim, _LOOPMSGSIGNAL, leds.log.append)
+
+    #signals to set box values
+    for index in xrange(PIN_NB):
+        box = getboxbynum(leds, index)
+        QObject.connect(sim.pins[index], _PINSIGNAL, box.setChecked)
+
+    #start it all
     thread.start()
     frame.show()
     app.exec_()
