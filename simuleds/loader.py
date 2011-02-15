@@ -4,6 +4,7 @@ from PyQt4.QtGui import QApplication, QFileDialog
 
 from .simuleds import Interface, Simardui
 
+
 def simfactory(name, filename):
     setup = lambda: None
     loop = lambda: None

@@ -60,8 +60,12 @@ class Simardui(QObject):
     def start(self):
         self.started = False
         if self.alive:
+            self.log('<b>reset!</b>')
             return
         self.live()
+
+    def isresetting(self):
+        return not self.started
 
     def live(self):
         self.alive = True
@@ -72,8 +76,8 @@ class Simardui(QObject):
                 digitalWrite = self.digitalWrite
                 global log
                 log = self.log
-                global started
-                started = self.started
+                global isresetting
+                isresetting = self.isresetting
                 pinMode = self.pinMode
                 exec self.loop in globals(), locals()
 
@@ -93,7 +97,7 @@ class Simardui(QObject):
         self.started = True
 
     def log(self, message):
-        self.emit(_LOOPMSGSIGNAL, message)
+        self.emit(_LOOPMSGSIGNAL, '<span>%s</span><br/>' % message)
 
 
 class ArduiThread(QThread):

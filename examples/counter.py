@@ -14,7 +14,7 @@ def loop():
         for index in xrange(PIN_NB):
 
             #HERE IS THE BREAK FOR THE RESET SWITCH
-            if not started:
+            if isresetting():
                 return
             #END RESET DIRTY HACK
 
