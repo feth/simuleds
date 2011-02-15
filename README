@@ -1,8 +1,21 @@
+what's this
+-----------
+
 a simulator for my arduino and leds
+
+get started
+-----------
+
+make
+./start.sh
+
+why
+---
 
 I'm not good at writing C, so I prefer check the logic in Python...
 
-Circuitry:
+Circuitry
+---------
 
 out0 ---- led0 --+-- gnd
 out1 ---- led1 --+
