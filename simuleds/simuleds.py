@@ -70,15 +70,18 @@ class Simardui(QObject):
     def isresetting(self):
         return not self.started
 
-    def start(self):
+    def dance(self):
         for pin in self.pins:
             pin.mode = OUTPUT
             pin.digitalWrite(True)
             delay(50)
             pin.digitalWrite(False)
             pin.mode = NOTUSED
+
+    def start(self):
         self.alive = True
         while self.alive:
+            self.dance()
             self._setup()
             while self.started:
                 self.loop()
