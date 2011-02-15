@@ -1,14 +1,13 @@
-from traceback import format_exc
 from imp import find_module, load_module
-from os.path import split
+from os.path import dirname, split
+from traceback import format_exc
 
-from PyQt4.QtCore import QObject, QThread, SIGNAL
-from PyQt4.QtGui import QFileDialog, QMessageBox
-from PyQt4.QtGui import QFrame
+from PyQt4.QtCore import QObject, QSettings, QThread, SIGNAL
+from PyQt4.QtGui import QFileDialog, QFrame, QMessageBox
 
 from . import api
+from .api import INPUT, NOTUSED, OUTPUT, SimException, delay
 from .leds_ui import Ui_Frame
-from .api import delay, NOTUSED, OUTPUT, INPUT, SimException
 
 
 _PINSIGNAL = SIGNAL('value changed')
@@ -144,6 +143,10 @@ class Interface(QFrame):
         self._setupsignals()
         self.old_thread = None
         self.sim = None
+        self.settings = QSettings(
+            "Random free software you stump around",
+            "simuleds"
+            )
 
     def _setupsignals(self):
         #ui signals -> load a firmware
@@ -202,7 +205,10 @@ class Interface(QFrame):
         self.design.log.append("<span %s>%s</span><br/>" % (style, message))
 
     def loadfile(self):
-        simklass = self._loadfile()
+        self.settings.beginGroup("Last run")
+        filename = unicode(self.settings.value("firmware", ".").toString())
+
+        simklass, filename = self._loadfile(filename)
         if not simklass:
             self.log("Cancel firmware load.")
             return
@@ -212,16 +218,23 @@ class Interface(QFrame):
             except:
                 self.err(format_exc())
                 raise
+        self.settings.setValue("firmware", filename)
+        self.settings.endGroup()
+        self.settings.sync()
 
     def err(self, message):
         self.log(message, style='color=#ff0000;')
 
-    def _loadfile(self):
+    def _loadfile(self, filename):
         """
         Interacts with user to get a sim plugin
         """
         while True:
-            filename = unicode(QFileDialog.getOpenFileName())
+            filename = unicode(QFileDialog.getOpenFileName(
+                self,
+                "Choose a firmware",
+                dirname(filename)
+                ))
             if not filename:
                 QMessageBox.warning(
                     None, "Abort simuleds",
@@ -243,5 +256,5 @@ class Interface(QFrame):
                 self.err(format_exc())
                 QMessageBox.warning(None, "Error", unicode(err))
                 continue
-            return simklass
+            return simklass, filename
 
