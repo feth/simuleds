@@ -38,6 +38,9 @@ background-color: rgb(255, 0, 0);
      </property>
     </widget>
    </item>
+   <item row="0" column="1" rowspan="14">
+    <widget class="QTextBrowser" name="log"/>
+   </item>
    <item row="1" column="0">
     <widget class="QCheckBox" name="led_1">
      <property name="text">
@@ -51,9 +54,6 @@ background-color: rgb(255, 0, 0);
       <string>led_2</string>
      </property>
     </widget>
-   </item>
-   <item row="0" column="1" rowspan="14">
-    <widget class="QTextBrowser" name="log"/>
    </item>
    <item row="3" column="0">
     <widget class="QCheckBox" name="led_3">
@@ -140,10 +140,38 @@ background-color: rgb(255, 0, 0);
     </widget>
    </item>
    <item row="15" column="0" colspan="2">
-    <widget class="QPushButton" name="load">
-     <property name="text">
-      <string>load firmware (*.py)</string>
+    <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Sunken</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QPushButton" name="load">
+        <property name="text">
+         <string>load firmware (*.py)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="recent">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>load recent firmware</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

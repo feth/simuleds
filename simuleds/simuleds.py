@@ -5,11 +5,11 @@
 # License: http://www.gnu.org/licenses/gpl-3.0.txt
 #
 from imp import find_module, load_module
-from os.path import dirname, split
+from os.path import dirname, exists, split
 from traceback import format_exc
 
-from PyQt4.QtCore import QObject, QSettings, QThread, SIGNAL
-from PyQt4.QtGui import QFileDialog, QFrame, QMessageBox
+from PyQt4.QtCore import QObject, QSettings, QThread, QVariant, SIGNAL
+from PyQt4.QtGui import QFileDialog, QFrame, QMenu, QMessageBox
 
 from . import api
 from .api import INPUT, NOTUSED, OUTPUT, SimException, delay
@@ -148,6 +148,8 @@ class Interface(QFrame):
         QFrame.__init__(self, parent)
         self.design = Ui_Frame()
         self.design.setupUi(self)
+        self.recentsmenu = QMenu()
+        self.design.recent.setMenu(self.recentsmenu)
         self.thread = None
         self._setupsignals()
         self.old_thread = None
@@ -157,6 +159,9 @@ class Interface(QFrame):
             "simuleds"
             )
 
+        self.recents = list(self._readrecent())
+        self._updaterecents()
+
     def _setupsignals(self):
         #ui signals -> load a firmware
         self.connect(self.design.load, SIGNAL('clicked()'), self.loadfile)
@@ -164,7 +169,22 @@ class Interface(QFrame):
     def getboxbynum(self, num):
         return getattr(self.design, 'led_%d' % num)
 
-    def setsim(self, sim):
+    def setsim(self, simklass):
+        try:
+            self._setsim(simklass())
+        except:
+            self.err(format_exc())
+            raise
+
+    def err(self, message):
+        self.log("<b>%s</b>" % message, style='color:#ff0000;')
+
+    def log(self, message, style=''):
+        if style != '':
+            style = 'style="%s"' % style
+        self.design.log.append("<span %s>%s</span><br/>" % (style, message))
+
+    def _setsim(self, sim):
         if self.thread:
             self.thread.stop()
             self.thread.terminate()
@@ -208,13 +228,8 @@ class Interface(QFrame):
             box = self.getboxbynum(index)
             QObject.disconnect(sim.pins[index], _PINSIGNAL, box.setChecked)
 
-    def log(self, message, style=''):
-        if style != '':
-            style = 'style="%s"' % style
-        self.design.log.append("<span %s>%s</span><br/>" % (style, message))
-
     def loadfile(self):
-        self.settings.beginGroup("Last run")
+        self.settings.beginGroup("Last opened")
         filename = unicode(self.settings.value("firmware", ".").toString())
 
         simklass, filename = self._loadfile(filename)
@@ -222,34 +237,82 @@ class Interface(QFrame):
             self.log("Cancel firmware load.")
             return
         else:
-            try:
-                self.setsim(simklass())
-            except:
-                self.err(format_exc())
-                raise
+            self.setsim(simklass)
         self.settings.setValue("firmware", filename)
         self.settings.endGroup()
+
+        self.addrecent(filename)
+        self.writerecentlist()
+
         self.settings.sync()
 
-    def err(self, message):
-        self.log(message, style='color=#ff0000;')
+    def loadfilefactory(self, filename):
+        def loadit():
+            simklass, unused = self._loadfile(filename, dialog=False)
+            if simklass:
+                self.setsim(simklass)
+            self.addrecent(filename)
+        return loadit
 
-    def _loadfile(self, filename):
+    def _updaterecents(self):
+        self.design.recent.setEnabled(bool(self.recents))
+        self.recentsmenu.clear()
+        if not self.recents:
+            return
+        for item in self.recents:
+            self.recentsmenu.addAction(item, self.loadfilefactory(item))
+
+    def _readrecent(self):
+        self.settings.beginGroup("Recent files")
+        recents = self.settings.value("list", []).toList()
+        self.settings.endGroup()
+        return self._recentlist(recents)
+
+    def writerecentlist(self):
+        self.settings.beginGroup("Recent files")
+        self.settings.setValue("list", self.recents)
+        self.settings.endGroup()
+
+    def addrecent(self, filename):
+        if filename in self.recents:
+            self.recents.remove(filename)
+        self.recents.insert(0, filename)
+        #limit to size 5
+        self.recents = self.recents[:5]
+        self._updaterecents()
+
+    def _recentlist(self, origlist, mostrecent=''):
+        if mostrecent:
+            yield mostrecent
+            count = 1
+        else:
+            count = 0
+        for item in origlist:
+            if isinstance(item, QVariant):
+                item = unicode(item.toString())
+            if item == mostrecent:
+                continue
+            yield item
+            count += 1
+            if count > 5:
+                break
+    def _loadfile(self, filename, dialog=True):
         """
         Interacts with user to get a sim plugin
         """
         while True:
-            filename = unicode(QFileDialog.getOpenFileName(
-                self,
-                "Choose a firmware",
-                dirname(filename)
-                ))
-            if not filename:
-                QMessageBox.warning(
-                    None, "Abort simuleds",
-                    "Aborting, you did not specify a file."
-                    )
-                return
+            if dialog:
+                filename = unicode(QFileDialog.getOpenFileName(
+                    self,
+                    "Choose a firmware",
+                    dirname(filename)
+                    ))
+                if not filename:
+                    self.log("Aborting, you did not specify a file.")
+                    return None, None
+            if not exists(filename):
+                self.err("File '%s' does not exist." % filename)
+                return None, None
             self.log("opening file: %s." % filename)
 
             try:
