@@ -61,7 +61,7 @@ class Simardui(QObject):
 
     def reset(self):
         self.started = False
-        self.log('<b>reset!</b>')
+        self.log("reset!")
 
     def stop(self):
         self.alive = False
@@ -100,7 +100,7 @@ class Simardui(QObject):
         self.started = True
 
     def log(self, message):
-        self.emit(_LOOPMSGSIGNAL, '<span>%s</span><br/>' % message)
+        self.emit(_LOOPMSGSIGNAL, message)
 
 
 class ArduiThread(QThread):
@@ -166,6 +166,9 @@ class Interface(QFrame):
         #ui signals -> load a firmware
         self.connect(self.design.load, SIGNAL('clicked()'), self.loadfile)
 
+        #ui signals -> reset button on the proto
+        QObject.connect(self.design.start, SIGNAL('clicked()'), self.reset)
+
     def getboxbynum(self, num):
         return getattr(self.design, 'led_%d' % num)
 
@@ -179,10 +182,15 @@ class Interface(QFrame):
     def err(self, message):
         self.log("<b>%s</b>" % message, style='color:#ff0000;')
 
-    def log(self, message, style=''):
+    def log(self, message, prefix='', style=''):
         if style != '':
             style = 'style="%s"' % style
-        self.design.log.append("<span %s>%s</span><br/>" % (style, message))
+        if prefix != '':
+            prefix = '<span><b>%s:</b> </span>' % prefix
+        self.design.log.append("%s<span %s>%s</span><br/>" % (prefix, style, message))
+
+    def simlog(self, message):
+        self.log(message, prefix='sim', style='color:#0000ff;')
 
     def _setsim(self, sim):
         if self.thread:
@@ -206,10 +214,7 @@ class Interface(QFrame):
 
     def _connectsim(self, sim):
         #ui signals -> logs
-        QObject.connect(sim, _LOOPMSGSIGNAL, self.design.log.append)
-
-        #ui signals -> reset button on the proto
-        QObject.connect(self.design.start, SIGNAL('clicked()'), self.reset)
+        QObject.connect(sim, _LOOPMSGSIGNAL, self.simlog)
 
         #signals to set box values
         for index in xrange(api.ARDUINO_DIGITAL_PIN_NB):
@@ -218,10 +223,7 @@ class Interface(QFrame):
 
     def _disconnectsim(self, sim):
         #ui signals -> logs
-        QObject.disconnect(sim, _LOOPMSGSIGNAL, self.design.log.append)
-
-        #ui signals -> reset button on the proto
-        QObject.disconnect(self.design.start, SIGNAL('clicked()'), sim.start)
+        QObject.disconnect(sim, _LOOPMSGSIGNAL, self.simlog)
 
         #signals to set box values
         for index in xrange(api.ARDUINO_DIGITAL_PIN_NB):
