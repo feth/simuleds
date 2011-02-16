@@ -19,6 +19,7 @@ from .leds_ui import Ui_Frame
 _PINSIGNAL = SIGNAL('value changed')
 _LOOPMSGSIGNAL = SIGNAL('loop message')
 
+
 class Pin(QObject):
 
     def __init__(self):
@@ -27,6 +28,8 @@ class Pin(QObject):
         self.value = False
         self.mode = NOTUSED
 
+    #Re-using arduino's API names
+    # pylint: disable=C0103
     def digitalWrite(self, value):
         if not (self.mode is OUTPUT):
             raise SimException("pin not in write mode")
@@ -37,6 +40,7 @@ class Pin(QObject):
         if not (self.mode & INPUT):
             raise SimException("pin not in read mode")
         return self.value
+    # pylint: enable=C0103
 
     #'mode' is a property, and self._mode is indirectly set in __init__
     # pylint: disable=W0201
@@ -56,7 +60,8 @@ class Simardui(QObject):
 
     def __init__(self):
         QObject.__init__(self)
-        self.pins = tuple(Pin() for index in xrange(api.ARDUINO_DIGITAL_PIN_NB))
+        self.pins = tuple(Pin()
+            for index in xrange(api.ARDUINO_DIGITAL_PIN_NB))
         self.started = self.alive = False
 
     def reset(self):
@@ -86,6 +91,8 @@ class Simardui(QObject):
             while self.started:
                 self.loop()
 
+    #Re-using arduino's API names
+    # pylint: disable=C0103
     def digitalWrite(self, index, value):
         self.pins[index].digitalWrite(value)
 
@@ -94,6 +101,7 @@ class Simardui(QObject):
 
     def pinMode(self, index, mode):
         self.pins[index].mode = mode
+    # pylint: enable=C0103
 
     def _setup(self):
         self.setup()
@@ -117,6 +125,7 @@ class ArduiThread(QThread):
     def stop(self):
         self.stop_fun()
 
+
 def simfactory(name, filename):
     """
     Builds a sim from a filename
@@ -127,20 +136,19 @@ def simfactory(name, filename):
         module = filename
     path, module = split(module)
 
-    plugin_info = find_module(module, [path,])
-    loaded = load_module(name, *plugin_info)
+    filename, pathname, description = find_module(module, [path, ])
+    loaded = load_module(name, filename, pathname, description)
 
     if not hasattr(loaded, 'setup') or not hasattr(loaded, 'loop'):
-        raise SimException(
-            "Please give me a Python source with a setup AND a loop functions"
-            )
+        raise SimException("Please give me a Python source "
+                "with a setup AND a loop functions")
 
-    Simobject = type(
+    simklass = type(
         name, (Simardui, ),
         {'setup': loaded.setup, 'loop': loaded.loop}
         )
 
-    return Simobject
+    return simklass
 
 
 class Interface(QFrame):
@@ -156,8 +164,7 @@ class Interface(QFrame):
         self.sim = None
         self.settings = QSettings(
             "Random free software you stump around",
-            "simuleds"
-            )
+            "simuleds")
 
         self.recents = list(self._readrecent())
         self._updaterecents()
@@ -187,7 +194,8 @@ class Interface(QFrame):
             style = 'style="%s"' % style
         if prefix != '':
             prefix = '<span><b>%s:</b> </span>' % prefix
-        self.design.log.append("%s<span %s>%s</span><br/>" % (prefix, style, message))
+        self.design.log.append("%s<span %s>%s</span><br/>" %
+            (prefix, style, message))
 
     def simlog(self, message):
         self.log(message, prefix='sim', style='color:#0000ff;')
@@ -250,7 +258,7 @@ class Interface(QFrame):
 
     def loadfilefactory(self, filename):
         def loadit():
-            simklass, unused = self._loadfile(filename, dialog=False)
+            simklass = self._loadfile(filename, dialog=False)[0]
             if simklass:
                 self.setsim(simklass)
             self.addrecent(filename)
@@ -298,17 +306,16 @@ class Interface(QFrame):
             count += 1
             if count > 5:
                 break
+
     def _loadfile(self, filename, dialog=True):
         """
         Interacts with user to get a sim plugin
         """
         while True:
             if dialog:
-                filename = unicode(QFileDialog.getOpenFileName(
-                    self,
-                    "Choose a firmware",
-                    dirname(filename)
-                    ))
+                filename = unicode(
+                QFileDialog.getOpenFileName(self,
+                    "Choose a firmware", dirname(filename)))
                 if not filename:
                     self.log("Aborting, you did not specify a file.")
                     return None, None
@@ -323,12 +330,11 @@ class Interface(QFrame):
                 self.err(format_exc())
                 QMessageBox.warning(
                     None, "Error",
-                    "File '%s' looks like an invalid Python source." % filename
-                    )
+                    "File '%s' looks like an invalid Python source." %
+                    filename)
                 continue
             except Exception, err:
                 self.err(format_exc())
                 QMessageBox.warning(None, "Error", unicode(err))
                 continue
             return simklass, filename
-
