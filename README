@@ -6,8 +6,14 @@ a simulator for my arduino and leds
 get started
 -----------
 
-make
-./start.sh
+% make
+% ./start.sh
+
+Then open a file in the examples. Or another
+
+do something
+------------
+Write a Python module with a setup function and a loop function, load them.
 
 why
 ---
