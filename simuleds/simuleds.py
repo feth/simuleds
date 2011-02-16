@@ -315,22 +315,27 @@ class Interface(QFrame):
             if dialog:
                 filename = unicode(
                 QFileDialog.getOpenFileName(self,
-                    "Choose a firmware", dirname(filename)))
+                    "Choose a firmware", dirname(filename),
+                    "Python files with setup() and loop() "
+                    "functions (*.py) (*.py)"))
                 if not filename:
                     self.log("Aborting, you did not specify a file.")
                     return None, None
             if not exists(filename):
                 self.err("File '%s' does not exist." % filename)
-                return None, None
+                QMessageBox.critical(None, "Error",
+                "File '%s' does not exist." % filename)
+                dialog = True
+                continue
             self.log("opening file: %s." % filename)
 
             try:
                 simklass = simfactory('my pony sim', filename)
             except (SyntaxError, TypeError), err:
                 self.err(format_exc())
-                QMessageBox.warning(
+                QMessageBox.critical(
                     None, "Error",
-                    "File '%s' looks like an invalid Python source." %
+                    "It seems '%s' is an invalid Python source." %
                     filename)
                 continue
             except Exception, err:
